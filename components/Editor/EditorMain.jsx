@@ -178,7 +178,7 @@ function EditorMain({ id, phone, product }) {
     }
   }, [model]);
 
-  function addCurrentItemToCart() {
+  async function addCurrentItemToCart() {
     if (!image) {
       toast.error("Please upload an image");
       return false;
@@ -198,6 +198,7 @@ function EditorMain({ id, phone, product }) {
         : "Custom Design";
 
     const itemId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Create a temporary preview URL (will be replaced with base64 in addItemToCart)
     const previewUrl = URL.createObjectURL(image);
 
     // Get brand name from filteredBrands
@@ -207,7 +208,7 @@ function EditorMain({ id, phone, product }) {
     const data = {
       name: !phone ? design.title : singleModel?.name,
       qty: 1,
-      image: previewUrl,
+      image: previewUrl, // Temporary blob URL, will be replaced with base64 in addItemToCart
       variant: !phone ? variant : selectedCaseType?.name,
       id: itemId,
       price: !phone ? design.price : selectedCaseType?.price,
@@ -226,21 +227,24 @@ function EditorMain({ id, phone, product }) {
       rotation: 0,
     };
 
-    addItemToCart(data, image, customCaseCoordinates);
+    // addItemToCart is now async and will convert image to base64
+    await addItemToCart(data, image, customCaseCoordinates);
     toast.success("Item added to cart");
     setImage(null);
     setLoading(false);
     setActiveVariant(null);
+    setBrand(null)
+    setModel(null)
     setLaptopSize({ height: 0, width: 0 });
     return true;
   }
 
-  function handleAddToCart() {
-    addCurrentItemToCart();
+  async function handleAddToCart() {
+    await addCurrentItemToCart();
   }
 
-  function handleBuyNow() {
-    const added = addCurrentItemToCart();
+  async function handleBuyNow() {
+    const added = await addCurrentItemToCart();
     if (added) {
       router.push("/checkout");
     }
