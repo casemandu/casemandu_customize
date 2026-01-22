@@ -192,51 +192,62 @@ function EditorMain({ id, phone, product }) {
     }
     setLoading(true);
 
-    const variant =
-      id === "laptopsleeves"
-        ? `Height : ${laptopSize?.height} , Width : ${laptopSize?.width} (In Inches)`
-        : "Custom Design";
+    try {
+      const variant =
+        id === "laptopsleeves"
+          ? `Height : ${laptopSize?.height} , Width : ${laptopSize?.width} (In Inches)`
+          : "Custom Design";
 
-    const itemId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    // Create a temporary preview URL (will be replaced with base64 in addItemToCart)
-    const previewUrl = URL.createObjectURL(image);
+      const itemId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Create a temporary preview URL (will be replaced with base64 in addItemToCart)
+      const previewUrl = URL.createObjectURL(image);
 
-    // Get brand name from filteredBrands
-    const selectedBrand = filteredBrands.find((b) => b._id === brand);
-    const selectedCaseType = caseTypes.find((item) => item._id === activeVariant);
+      // Get brand name from filteredBrands
+      const selectedBrand = filteredBrands.find((b) => b._id === brand);
+      const selectedCaseType = caseTypes.find((item) => item._id === activeVariant);
 
-    const data = {
-      name: !phone ? design.title : singleModel?.name,
-      qty: 1,
-      image: previewUrl, // Temporary blob URL, will be replaced with base64 in addItemToCart
-      variant: !phone ? variant : selectedCaseType?.name,
-      id: itemId,
-      price: !phone ? design.price : selectedCaseType?.price,
-      // Additional fields for proper order tracking
-      productId: phone ? singleModel?._id : null,
-      brandName: phone ? selectedBrand?.name : null,
-      modelName: phone ? singleModel?.name : null,
-      caseType: phone ? selectedCaseType?.name : null,
-      productType: phone ? "phonecase" : design.title,
-    };
+      const data = {
+        name: !phone ? design.title : singleModel?.name,
+        qty: 1,
+        image: previewUrl, // Temporary blob URL, will be replaced with base64 in addItemToCart
+        variant: !phone ? variant : selectedCaseType?.name,
+        id: itemId,
+        price: !phone ? design.price : selectedCaseType?.price,
+        // Additional fields for proper order tracking
+        productId: phone ? singleModel?._id : null,
+        brandName: phone ? selectedBrand?.name : null,
+        modelName: phone ? singleModel?.name : null,
+        caseType: phone ? selectedCaseType?.name : null,
+        productType: phone ? "phonecase" : design.title,
+      };
 
-    const customCaseCoordinates = {
-      x: 0,
-      y: 0,
-      scale: 1,
-      rotation: 0,
-    };
+      const customCaseCoordinates = {
+        x: 0,
+        y: 0,
+        scale: 1,
+        rotation: 0,
+      };
 
-    // addItemToCart is now async and will convert image to base64
-    await addItemToCart(data, image, customCaseCoordinates);
-    toast.success("Item added to cart");
-    setImage(null);
-    setLoading(false);
-    setActiveVariant(null);
-    setBrand(null)
-    setModel(null)
-    setLaptopSize({ height: 0, width: 0 });
-    return true;
+      // addItemToCart is now async and will convert image to base64
+      await addItemToCart(data, image, customCaseCoordinates);
+      
+      // Clean up blob URL
+      URL.revokeObjectURL(previewUrl);
+      
+      toast.success("Item added to cart");
+      setImage(null);
+      setLoading(false);
+      setActiveVariant(null);
+      setBrand(null);
+      setModel(null);
+      setLaptopSize({ height: 0, width: 0 });
+      return true;
+    } catch (error) {
+      console.error("Error adding item to cart:", error);
+      toast.error(error.message || "Failed to add item to cart. Please try again.");
+      setLoading(false);
+      return false;
+    }
   }
 
   async function handleAddToCart() {
@@ -647,19 +658,41 @@ function EditorMain({ id, phone, product }) {
               <input
                 disabled={loading}
                 onChange={(e) => {
-                  if (e.target.files.length === 0) return;
-                  setImage(e.target.files[0]);
+                  if (!e.target.files || e.target.files.length === 0) return;
+                  const file = e.target.files[0];
+                  
+                  // Validate file type
+                  if (!file.type.startsWith('image/')) {
+                    toast.error("Please select a valid image file");
+                    return;
+                  }
+                  
+                  // Validate file size (max 10MB)
+                  const maxSize = 10 * 1024 * 1024; // 10MB
+                  if (file.size > maxSize) {
+                    toast.error("Image size is too large. Please use an image smaller than 10MB.");
+                    return;
+                  }
+                  
+                  setImage(file);
+                  // Reset input to allow selecting the same file again
+                  e.target.value = '';
                 }}
                 type="file"
                 id="file"
                 accept="image/*"
+                capture="environment"
                 className="hidden"
               />
 
               {/* Upload Button */}
               <label
                 htmlFor="file"
-                className="flex items-center justify-center gap-3 w-full py-4 px-6 bg-white border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-purple hover:bg-purple/5 transition-all duration-200 group"
+                className="flex items-center justify-center gap-3 w-full py-4 px-6 bg-white border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-purple hover:bg-purple/5 active:bg-purple/10 transition-all duration-200 group touch-manipulation"
+                onClick={(e) => {
+                  // Prevent event bubbling on mobile
+                  e.stopPropagation();
+                }}
               >
                 <div className="p-2 bg-purple/10 rounded-lg group-hover:bg-purple/20 transition-colors">
                   <svg
@@ -692,26 +725,36 @@ function EditorMain({ id, phone, product }) {
               {!!image && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
-                    onClick={handleAddToCart}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleAddToCart();
+                    }}
+                    onTouchStart={(e) => {
+                      // Prevent double-tap zoom on mobile
+                      e.currentTarget.style.touchAction = 'manipulation';
+                    }}
                     disabled={loading}
-                    className="flex items-center justify-center gap-2 py-4 px-6 bg-white border-2 border-gray-900 text-gray-900 rounded-xl font-semibold hover:bg-gray-900 hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center gap-2 py-4 px-6 bg-white border-2 border-gray-900 text-gray-900 rounded-xl font-semibold hover:bg-gray-900 hover:text-white active:bg-gray-800 active:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                    type="button"
                   >
-                    
                     {loading ? "Adding..." : "Add to Cart"}
                   </button>
                   <button
-                    onClick={handleBuyNow}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleBuyNow();
+                    }}
+                    onTouchStart={(e) => {
+                      // Prevent double-tap zoom on mobile
+                      e.currentTarget.style.touchAction = 'manipulation';
+                    }}
                     disabled={loading}
-                    className="flex items-center justify-center gap-2 py-4 px-6 bg-purple text-white rounded-xl font-semibold hover:bg-purple/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center gap-2 py-4 px-6 bg-purple text-white rounded-xl font-semibold hover:bg-purple/90 active:bg-purple/80 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                    type="button"
                   >
-                    {loading ? (
-                      "Processing..."
-                    ) : (
-                      <>
-                        Buy Now
-                        
-                      </>
-                    )}
+                    {loading ? "Processing..." : "Buy Now"}
                   </button>
                 </div>
               )}

@@ -37,22 +37,19 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <CartProvider>
-
-        {released && 
-
-      <body
-      className={`${poppins.className}   antialiased`}
-        >
-        <Toaster position="top-right" richColors />
-        <Offers/>
-        <Navbar />
-        {children}
-      </body>
-     || <body className={`${PoppinsRegular.className} antialiased`}>
-          <Releasing/>
+        {released ? (
+          <body className={`${poppins.className} antialiased`}>
+            <Toaster position="top-right" richColors />
+            <Offers/>
+            <Navbar />
+            {children}
           </body>
-     }
-        </CartProvider>
+        ) : (
+          <body className={`${PoppinsRegular.className} antialiased`}>
+            <Releasing/>
+          </body>
+        )}
+      </CartProvider>
     </html>
   );
 }
