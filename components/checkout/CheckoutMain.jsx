@@ -25,6 +25,14 @@ function CheckoutMain() {
     email: "",
   });
 
+  const [errors, setErrors] = React.useState({
+    name: "",
+    phone: "",
+    district: "",
+    address: "",
+    email: "",
+  });
+
   const districts = [
     "Achham",
     "Arghakhanchi",
@@ -141,23 +149,126 @@ function CheckoutMain() {
     setPromoDiscount(dis);
   }, [promo]);
 
+  // Validation functions
+  const validateName = (name) => {
+    if (!name || name.trim() === "") {
+      return "Name is required";
+    }
+    if (name.trim().length < 2) {
+      return "Name must be at least 2 characters";
+    }
+    if (!/^[a-zA-Z\s]+$/.test(name.trim())) {
+      return "Name should only contain letters and spaces";
+    }
+    return "";
+  };
+
+  const validateEmail = (email) => {
+    if (!email || email.trim() === "") {
+      return "Email is required";
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return "Please enter a valid email address";
+    }
+    return "";
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone || phone.trim() === "") {
+      return "Phone number is required";
+    }
+    // Nepal phone numbers: 98XXXXXXXX or 97XXXXXXXX (10 digits starting with 98 or 97)
+    const phoneRegex = /^(98|97)[0-9]{8}$/;
+    const cleanedPhone = phone.trim().replace(/\s+/g, "");
+    if (!phoneRegex.test(cleanedPhone)) {
+      return "Please enter a valid 10-digit phone number starting with 98 or 97";
+    }
+    return "";
+  };
+
+  const validateDistrict = (district) => {
+    if (!district || district === "") {
+      return "Please select a district";
+    }
+    return "";
+  };
+
+  const validateAddress = (address) => {
+    if (!address || address.trim() === "") {
+      return "Address is required";
+    }
+    if (address.trim().length < 5) {
+      return "Address must be at least 5 characters";
+    }
+    return "";
+  };
+
+  const validateForm = () => {
+    const newErrors = {
+      name: validateName(data.name),
+      email: validateEmail(data.email),
+      phone: validatePhone(data.phone),
+      district: validateDistrict(data.district),
+      address: validateAddress(data.address),
+    };
+
+    setErrors(newErrors);
+
+    // Check if there are any errors
+    const hasErrors = Object.values(newErrors).some((error) => error !== "");
+    return !hasErrors;
+  };
+
   function checkIfFormFIlled() {
-    if (
-      data.name === "" ||
-      data.phone === "" ||
-      data.district === "" ||
-      data.address === "" ||
-      data.email === ""
-    ) {
-      toast.error("Please fill all the required fields");
+    // Validate all fields
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form");
       return false;
     }
+
     if (activePayment === null) {
       toast.error("Please select a payment method");
       return false;
     }
+
     setShowPop(true);
+    return true;
   }
+
+  // Handle input changes with validation
+  const handleInputChange = (field, value) => {
+    setData({ ...data, [field]: value });
+    // Clear error for this field when user starts typing
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: "" });
+    }
+  };
+
+  // Validate on blur
+  const handleBlur = (field) => {
+    let error = "";
+    switch (field) {
+      case "name":
+        error = validateName(data.name);
+        break;
+      case "email":
+        error = validateEmail(data.email);
+        break;
+      case "phone":
+        error = validatePhone(data.phone);
+        break;
+      case "district":
+        error = validateDistrict(data.district);
+        break;
+      case "address":
+        error = validateAddress(data.address);
+        break;
+      default:
+        break;
+    }
+    setErrors({ ...errors, [field]: error });
+  };
 
   useEffect(() => {
     let grand = cartItems.reduce((acc, item) => {
@@ -229,12 +340,18 @@ function CheckoutMain() {
                 <label className="block text-gray-600 mb-1">Full Name *</label>
                 <input
                   onChange={(e) => {
-                    setData({ ...data, name: e.target.value });
+                      handleInputChange("name", e.target.value);
                   }}
+                    onBlur={() => handleBlur("name")}
+                    value={data.name}
                   type="text"
                   placeholder="Eg. John Doe"
-                  className="w-full border rounded-md p-2"
+                    className={`w-full border rounded-md p-2 ${errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-300 focus:border-purple focus:ring-purple"
+                      } focus:outline-none focus:ring-1`}
                 />
+                  {errors.name && (
+                    <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                  )}
               </div>
 
               <div className="mb-4">
@@ -243,12 +360,18 @@ function CheckoutMain() {
                 </label>
                 <input
                   onChange={(e) => {
-                    setData({ ...data, email: e.target.value });
+                      handleInputChange("email", e.target.value);
                   }}
+                    onBlur={() => handleBlur("email")}
+                    value={data.email}
                   type="email"
                   placeholder="Eg. john.doe@gmail.com"
-                  className="w-full border rounded-md p-2"
+                    className={`w-full border rounded-md p-2 ${errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-300 focus:border-purple focus:ring-purple"
+                      } focus:outline-none focus:ring-1`}
                 />
+                  {errors.email && (
+                    <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                  )}
               </div>
 
               <div className="mb-4">
@@ -257,12 +380,24 @@ function CheckoutMain() {
                 </label>
                 <input
                   onChange={(e) => {
-                    setData({ ...data, phone: e.target.value });
+                      // Only allow numbers
+                      const value = e.target.value.replace(/\D/g, "");
+                      handleInputChange("phone", value);
                   }}
+                    onBlur={() => handleBlur("phone")}
+                    value={data.phone}
                   type="text"
                   placeholder="98XXXXXXXX"
-                  className="w-full border rounded-md p-2"
+                    maxLength={10}
+                    className={`w-full border rounded-md p-2 ${errors.phone ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-300 focus:border-purple focus:ring-purple"
+                      } focus:outline-none focus:ring-1`}
                 />
+                  {errors.phone && (
+                    <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+                  )}
+                  <p className="text-gray-500 text-xs mt-1">
+                    Enter 10-digit number starting with 98 or 97
+                  </p>
               </div>
               <div className="mb-4">
                 <label className="block text-gray-600 mb-1">
@@ -270,9 +405,12 @@ function CheckoutMain() {
                 </label>
                 <select
                   onChange={(e) => {
-                    setData({ ...data, district: e.target.value });
+                      handleInputChange("district", e.target.value);
                   }}
-                  className="w-full border rounded-md p-2"
+                    onBlur={() => handleBlur("district")}
+                    value={data.district}
+                    className={`w-full border rounded-md p-2 ${errors.district ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-300 focus:border-purple focus:ring-purple"
+                      } focus:outline-none focus:ring-1`}
                 >
                   <option value={""}>Select a district...</option>
                   {districts.map((district) => (
@@ -281,17 +419,27 @@ function CheckoutMain() {
                     </option>
                   ))}
                 </select>
+                  {errors.district && (
+                    <p className="text-red-500 text-sm mt-1">{errors.district}</p>
+                  )}
               </div>
               <div className="mb-4">
                 <label className="block text-gray-600 mb-1">Address *</label>
-                <input
+                  <textarea
                   onChange={(e) => {
-                    setData({ ...data, address: e.target.value });
+                      handleInputChange("address", e.target.value);
                   }}
+                    onBlur={() => handleBlur("address")}
+                    value={data.address}
                   type="text"
-                  placeholder="Enter your address"
-                  className="w-full border rounded-md p-2"
+                    placeholder="Enter your complete address"
+                    rows={3}
+                    className={`w-full border rounded-md p-2 resize-none ${errors.address ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-300 focus:border-purple focus:ring-purple"
+                      } focus:outline-none focus:ring-1`}
                 />
+                  {errors.address && (
+                    <p className="text-red-500 text-sm mt-1">{errors.address}</p>
+                  )}
               </div>
               <p className="text-gray-600 mb-4">
                 Delivery time: 2-3 days inside the valley, 4-5 days outside.

@@ -149,6 +149,7 @@ export async function createOrder(
   
   // Append orderItems - backend requires this field
   formData.append("orderItems", orderItemsJson);
+  formData.append("isCustomOrder", "true");
 
   
   if (promo && promo.code) {
