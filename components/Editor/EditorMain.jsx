@@ -681,7 +681,6 @@ function EditorMain({ id, phone, product }) {
                 type="file"
                 id="file"
                 accept="image/*"
-                capture="environment"
                 className="hidden"
               />
 
